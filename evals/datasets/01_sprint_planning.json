@@ -1,0 +1,23 @@
+{
+  "id": "01-sprint-planning",
+  "title": "Sprint 14 Planning",
+  "meeting_date": "2026-09-07",
+  "transcript": "../../samples/transcripts/2026-09-07_sprint-14-planning.txt",
+  "notes": "First meeting: no open actions. Tests owner patterns, team ownership, and a hedged non-action ('we should maybe look at biometric login') that must NOT be extracted.",
+  "open_actions": [],
+  "expected_actions": [
+    {"task": "Handle the authentication changes", "owner": "Priya Sharma", "due_date": null},
+    {"task": "Update the API design", "owner": "Team", "due_date": "2026-09-11"},
+    {"task": "Share the user research", "owner": "Sam Lee", "due_date": "2026-09-09"},
+    {"task": "Summarize the top five pain points from the interviews", "owner": "Sam Lee", "due_date": null},
+    {"task": "Set up the new staging environment", "owner": "Alex Kim", "due_date": "2026-09-18"}
+  ],
+  "expected_status_updates": [],
+  "expected_decisions": [
+    "Use OAuth 2.0 with PKCE for the mobile app",
+    "Use PostgreSQL 16 for the new user service"
+  ],
+  "expected_risks": [
+    "The staging environment still runs the old database version, which is a risk for the load tests"
+  ]
+}

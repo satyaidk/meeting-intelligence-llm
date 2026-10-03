@@ -1,0 +1,9 @@
+Dev: ok so quick one from me - the payments webhook thing, I'm on it, should have a PR up before the weekend
+Nina: nice. oh and can someone ping legal about the new T&Cs?
+Raj: yeah leave that with me
+Nina: cool. also heads up, the Stripe sandbox has been flaky all week, it's slowing everyone down
+Dev: +1, it killed two of my test runs yesterday
+Nina: let's just switch the CI to the mock gateway for now, everyone ok with that?
+Raj: works for me
+Dev: same
+Nina: great, I'll make that change today then

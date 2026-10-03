@@ -1,0 +1,11 @@
+Maya Chen: Welcome to the sprint review. Let's start with authentication.
+Priya Sharma: Authentication is completed. Security approved the credentials on Tuesday, and the OAuth flow is merged.
+Maya Chen: Excellent work, Priya.
+Alex Kim: The staging environment is done as well, and Priya and I finished the staging config together.
+Sam Lee: I shared the user research on Wednesday as planned.
+Maya Chen: Great. Based on the research, we decided to launch the beta on October 15th.
+Maya Chen: Alex, please run the load tests on staging by October 2nd.
+Alex Kim: Will do. One risk: if load testing slips, we may not be ready before the next release.
+Sam Lee: I'll draft the beta announcement email by next Friday.
+Maya Chen: And we need someone to update the onboarding screens before the next release.
+Priya Sharma: I can take the onboarding screens.

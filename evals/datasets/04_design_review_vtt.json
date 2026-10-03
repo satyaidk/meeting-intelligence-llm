@@ -1,0 +1,19 @@
+{
+  "id": "04-design-review-vtt",
+  "title": "Design Review",
+  "meeting_date": "2026-09-22",
+  "transcript": "../../samples/other_formats/design-review.vtt",
+  "notes": "WebVTT input (Teams/Zoom caption export). Checks that subtitle parsing keeps speaker names.",
+  "open_actions": [],
+  "expected_actions": [
+    {"task": "Prepare the dark mode mockups", "owner": "Jordan Patel", "due_date": "2026-09-24"},
+    {"task": "Check the contrast ratios against the accessibility guidelines", "owner": "Jordan Patel", "due_date": null}
+  ],
+  "expected_status_updates": [],
+  "expected_decisions": [
+    "Keep the bottom navigation bar for the beta"
+  ],
+  "expected_risks": [
+    "The icon set license expires at the end of the month"
+  ]
+}

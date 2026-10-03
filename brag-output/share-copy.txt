@@ -1,0 +1,1 @@
+Introducing ActionGraph: it turns meeting transcripts into tracked decisions, owners and deadlines, checks every item against what was actually said, and follows each action from "open" to "done" across meetings. Built with Python, Claude, FastAPI and SQLite.

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ActionGraph</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Graph drawing library, loaded from a CDN (no build step needed) -->
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">ActionGraph <span class="tagline">meetings &rarr; tracked work</span></div>
+    <div id="provider-badge" class="badge">connecting&hellip;</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="process">Process meeting</button>
+    <button class="tab" data-tab="actions">Actions</button>
+    <button class="tab" data-tab="review">Review queue <span id="review-count" class="count"></span></button>
+    <button class="tab" data-tab="graph">Graph</button>
+    <button class="tab" data-tab="meetings">Meetings</button>
+  </nav>
+
+  <main>
+    <!-- 1. Process a meeting ------------------------------------------------>
+    <section id="tab-process" class="panel active">
+      <div class="grid-2">
+        <form id="process-form" class="card">
+          <h2>Paste a transcript</h2>
+          <label>Title <input name="title" required placeholder="Sprint 14 Planning"></label>
+          <label>Meeting date <input name="meeting_date" type="date" required></label>
+          <label>Transcript <span class="hint">one "Speaker: text" line per turn</span>
+            <textarea name="transcript" rows="12" required placeholder="Maya: Priya will handle the authentication changes."></textarea>
+          </label>
+          <div class="row">
+            <button type="submit" class="primary">Extract</button>
+            <button type="button" id="insert-example" class="secondary">Insert example</button>
+          </div>
+        </form>
+
+        <form id="upload-form" class="card">
+          <h2>&hellip;or upload a file</h2>
+          <p class="hint">.txt, .vtt, .srt, .json transcripts, or audio/video (needs the <code>audio</code> extra).</p>
+          <label>Title <input name="title" required></label>
+          <label>Meeting date <input name="meeting_date" type="date" required></label>
+          <label>File <input name="file" type="file" required></label>
+          <button type="submit" class="primary">Upload &amp; extract</button>
+          <div id="process-result"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. Action tracker --------------------------------------------------->
+    <section id="tab-actions" class="panel">
+      <div class="toolbar">
+        <label>Status
+          <select id="status-filter">
+            <option value="">all</option><option>open</option><option>in_progress</option>
+            <option>blocked</option><option>done</option><option>cancelled</option>
+          </select>
+        </label>
+      </div>
+      <table class="data">
+        <thead><tr><th>#</th><th>Task</th><th>Owner</th><th>Due</th><th>Status</th><th>Review</th><th>Conf.</th></tr></thead>
+        <tbody id="actions-body"></tbody>
+      </table>
+      <div id="action-detail" class="card hidden"></div>
+    </section>
+
+    <!-- 3. Review queue ----------------------------------------------------->
+    <section id="tab-review" class="panel">
+      <p class="hint">Items the system was not sure about. Approving a status update applies it to the action.</p>
+      <div id="review-list"></div>
+    </section>
+
+    <!-- 4. Graph ------------------------------------------------------------>
+    <section id="tab-graph" class="panel">
+      <div class="toolbar">
+        <span class="legend"><i class="dot meeting"></i>meeting <i class="dot action"></i>action
+          <i class="dot person"></i>person <i class="dot decision"></i>decision <i class="dot risk"></i>risk</span>
+        <button id="copy-mermaid" class="secondary">Copy as Mermaid</button>
+      </div>
+      <div id="graph-canvas"></div>
+    </section>
+
+    <!-- 5. Meetings --------------------------------------------------------->
+    <section id="tab-meetings" class="panel">
+      <div id="meetings-list"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+</body>
+</html>

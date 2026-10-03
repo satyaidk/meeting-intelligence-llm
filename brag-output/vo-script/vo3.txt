@@ -1,0 +1,1 @@
+Claude reads the transcript and returns structured, validated data: every decision, action, owner, deadline, and risk.

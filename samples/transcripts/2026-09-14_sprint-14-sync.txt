@@ -1,0 +1,10 @@
+Maya Chen: Let's go around for updates.
+Alex Kim: The API design doc is done. I shared the final version with the backend team on Thursday.
+Priya S.: The authentication changes are blocked. We're waiting on the security team to approve the new OAuth client credentials.
+Maya Chen: That's a blocker. I'll escalate the credentials request to the security lead today.
+Sam Lee: The user research is mostly written, but I need a few more days. Can we push it to next Wednesday?
+Maya Chen: That's fine, next Wednesday works.
+Alex Kim: Staging is in progress. The new database is up, and I'm migrating the test data now.
+Maya Chen: Good. @priya, once the credentials arrive, please pair with Alex on the staging config.
+Maya Chen: Also, we agreed to freeze new feature requests until the beta ships.
+Sam Lee: The pain point summary is finished, by the way. It's in the shared drive.

@@ -1,0 +1,23 @@
+WEBVTT
+
+NOTE Example of a Microsoft Teams / Zoom caption export. Speaker names are in <v> tags.
+
+1
+00:00:01.000 --> 00:00:04.500
+<v Maya Chen>Thanks for joining the design review.</v>
+
+2
+00:00:04.500 --> 00:00:09.000
+<v Maya Chen>We decided to keep the bottom navigation bar for the beta.</v>
+
+3
+00:00:09.200 --> 00:00:13.800
+<v Jordan Patel>I'll prepare the dark mode mockups by Thursday.</v>
+
+4
+00:00:14.000 --> 00:00:19.000
+<v Maya Chen>Jordan, please also check the contrast ratios against the accessibility guidelines.</v>
+
+5
+00:00:19.500 --> 00:00:24.000
+<v Jordan Patel>Sure. One risk: the icon set license expires at the end of the month.</v>

@@ -1,0 +1,1 @@
+One model call per meeting. A hundred and sixty tests. And an honest eval to back it up.

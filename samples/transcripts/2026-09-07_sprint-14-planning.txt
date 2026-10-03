@@ -1,0 +1,15 @@
+Maya Chen: Good morning, everyone. Let's kick off sprint 14 planning for the mobile banking app.
+Priya Sharma: Morning! Quick note before we start: the login prototype is ready for anyone who wants to try it.
+Maya Chen: Great. First topic is authentication. After last week's security review, we decided to use OAuth 2.0 with PKCE for the mobile app.
+Sam Lee: Makes sense to me.
+Maya Chen: Priya will handle the authentication changes.
+Priya Sharma: Sounds good.
+Maya Chen: We'll update the API design by Friday so the backend team can review it.
+Maya Chen: Sam, please share the user research by Wednesday.
+Sam Lee: Will do. I'll also summarize the top five pain points from the interviews.
+Alex Kim: One concern: the staging environment still runs the old database version. That is a risk for the load tests.
+Maya Chen: Good point. Alex, can you set up the new staging environment by end of next week?
+Alex Kim: Yes, I'll take care of it.
+Priya Sharma: We should maybe look at biometric login at some point.
+Maya Chen: Let's park that idea for now. Decision: we're going with PostgreSQL 16 for the new user service.
+Maya Chen: Thanks, everyone. Same time next Monday.

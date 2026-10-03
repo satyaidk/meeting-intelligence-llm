@@ -1,0 +1,1 @@
+Every item has to quote the transcript. And anything the system isn't sure about goes to a human, with the reason why.

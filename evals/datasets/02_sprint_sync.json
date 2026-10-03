@@ -1,0 +1,31 @@
+{
+  "id": "02-sprint-sync",
+  "title": "Sprint 14 Sync",
+  "meeting_date": "2026-09-14",
+  "transcript": "../../samples/transcripts/2026-09-14_sprint-14-sync.txt",
+  "notes": "Mid-sprint check-in. Most of the content is progress on open items, which must become status updates rather than new actions.",
+  "open_actions": [
+    {"id": 1, "task": "Handle the authentication changes", "owner": "Priya Sharma", "deadline": null, "status": "open"},
+    {"id": 2, "task": "Update the API design", "owner": "Team", "deadline": "by Friday", "status": "open"},
+    {"id": 3, "task": "Share the user research", "owner": "Sam Lee", "deadline": "by Wednesday", "status": "open"},
+    {"id": 4, "task": "Summarize the top five pain points from the interviews", "owner": "Sam Lee", "deadline": null, "status": "open"},
+    {"id": 5, "task": "Set up the new staging environment", "owner": "Alex Kim", "deadline": "by end of next week", "status": "open"}
+  ],
+  "expected_actions": [
+    {"task": "Escalate the credentials request to the security lead", "owner": "Maya Chen", "due_date": "2026-09-14"},
+    {"task": "Pair with Alex on the staging config", "owner": "Priya Sharma", "due_date": null}
+  ],
+  "expected_status_updates": [
+    {"action_id": 1, "new_status": ["blocked"]},
+    {"action_id": 2, "new_status": ["done"]},
+    {"action_id": 3, "new_status": ["in_progress", "open"]},
+    {"action_id": 4, "new_status": ["done"]},
+    {"action_id": 5, "new_status": ["in_progress"]}
+  ],
+  "expected_decisions": [
+    "Freeze new feature requests until the beta ships"
+  ],
+  "expected_risks": [
+    "Authentication changes are blocked waiting on the security team to approve the new OAuth client credentials"
+  ]
+}

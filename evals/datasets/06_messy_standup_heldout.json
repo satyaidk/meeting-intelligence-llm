@@ -1,0 +1,20 @@
+{
+  "id": "06-messy-standup-heldout",
+  "title": "Payments Standup",
+  "meeting_date": "2026-09-24",
+  "transcript": "../transcripts/2026-09-24_messy-standup.txt",
+  "notes": "HELD-OUT case: written in casual, real-world speech AFTER the rule-based extractor was finished, and never used to tune it. Commitments are implicit ('I'm on it', 'leave that with me'), the decision is a question everyone agrees to, and the risk uses no keyword like 'risk' or 'blocked'. This is where an LLM should clearly beat regex rules.",
+  "open_actions": [],
+  "expected_actions": [
+    {"task": "Open a pull request for the payments webhook", "owner": "Dev", "due_date": "2026-09-25"},
+    {"task": "Ping legal about the new T&Cs", "owner": "Raj", "due_date": null},
+    {"task": "Switch the CI to the mock gateway", "owner": "Nina", "due_date": "2026-09-24"}
+  ],
+  "expected_status_updates": [],
+  "expected_decisions": [
+    "Switch the CI to the mock payment gateway for now"
+  ],
+  "expected_risks": [
+    "The Stripe sandbox has been flaky all week and is slowing everyone down"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "03-sprint-review",
+  "title": "Sprint 14 Review",
+  "meeting_date": "2026-09-21",
+  "transcript": "../../samples/transcripts/2026-09-21_sprint-14-review.txt",
+  "notes": "Completions on open items plus new work with an explicit date, an ambiguous date ('next Friday' said on a Monday is read as Fri 2 Oct) and an unresolvable one ('before the next release').",
+  "open_actions": [
+    {"id": 1, "task": "Handle the authentication changes", "owner": "Priya Sharma", "deadline": null, "status": "blocked"},
+    {"id": 3, "task": "Share the user research", "owner": "Sam Lee", "deadline": "next Wednesday", "status": "in_progress"},
+    {"id": 5, "task": "Set up the new staging environment", "owner": "Alex Kim", "deadline": "by end of next week", "status": "in_progress"},
+    {"id": 6, "task": "Escalate the credentials request to the security lead", "owner": "Maya Chen", "deadline": "today", "status": "open"},
+    {"id": 7, "task": "Pair with Alex on the staging config", "owner": "Priya Sharma", "deadline": "once the credentials arrive", "status": "open"}
+  ],
+  "expected_actions": [
+    {"task": "Run the load tests on staging", "owner": "Alex Kim", "due_date": "2026-10-02"},
+    {"task": "Draft the beta announcement email", "owner": "Sam Lee", "due_date": "2026-10-02"},
+    {"task": "Update the onboarding screens", "owner": "Priya Sharma", "due_date": null}
+  ],
+  "expected_status_updates": [
+    {"action_id": 1, "new_status": ["done"]},
+    {"action_id": 3, "new_status": ["done"]},
+    {"action_id": 5, "new_status": ["done"]},
+    {"action_id": 6, "new_status": ["done"]},
+    {"action_id": 7, "new_status": ["done"]}
+  ],
+  "expected_decisions": [
+    "Launch the beta on October 15th"
+  ],
+  "expected_risks": [
+    "If load testing slips, the team may not be ready before the next release"
+  ]
+}
