@@ -6,6 +6,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Web UI deep links: `#review`, `#graph`, `#meetings`, `#actions/<id>` open a view directly.
+- README banner, product screenshots and demo video link; `SECURITY.md` and `CODE_OF_CONDUCT.md`.
+
+### Changed
+- README restructured to a standard open-source layout (overview, demo, architecture, getting started, usage, quality, evaluation, ADRs).
+- CI also runs on pushes to the `dev` branch.
+
+### Fixed
+- Graph view: decision and risk nodes were not drawn (an explicit `size: undefined` overrode the library default); the graph now zooms to fit once the layout settles.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

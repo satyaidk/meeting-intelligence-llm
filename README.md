@@ -1,233 +1,312 @@
+<div align="center">
+
+<img src="docs/assets/banner.jpg" alt="ActionGraph: meetings to tracked work" width="100%" />
+
 # ActionGraph
 
-**LLM-powered meeting intelligence that turns conversations into trackable, reviewable work.**
+**LLM-powered meeting intelligence that converts conversations into structured, verifiable, trackable work.**
 
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-160%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+[![CI](https://github.com/satyaidk/Action-Graph/actions/workflows/ci.yml/badge.svg)](https://github.com/satyaidk/Action-Graph/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-160%20passed-2ea44f)](docs/guides/TESTING.md)
+[![Coverage](https://img.shields.io/badge/coverage-96%25-2ea44f)](docs/guides/TESTING.md#coverage)
+[![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Most meeting tools *summarise*. ActionGraph *extracts and tracks*. It reads a
-transcript (or audio), pulls out **decisions, action items, owners, deadlines
-and risks** as validated structured data, resolves "Priya", "Priya S." and
-"@priya" to one person, converts "by Friday" into a real date, and follows each
-action **across meetings**: created → blocked → done. Anything the system is
-not sure about goes to a **human review queue** instead of silently becoming a
-task.
+[Overview](#overview) •
+[Demo](#demo) •
+[Architecture](#architecture) •
+[Getting started](#getting-started) •
+[Documentation](docs/README.md) •
+[Design doc](docs/design/DESIGN.md) •
+[Contributing](CONTRIBUTING.md)
 
-```text
-"We'll update the API design by Friday. Priya will handle the authentication
- changes. Sam, please share the user research by Wednesday."
-```
-
-becomes
-
-```json
-{
-  "actions": [
-    {"task": "Update the API design",              "owner": "Team",         "due_date": "2026-09-11"},
-    {"task": "Implement the authentication changes", "owner": "Priya Sharma", "due_date": null},
-    {"task": "Share the user research",            "owner": "Sam Lee",      "due_date": "2026-09-09"}
-  ]
-}
-```
-
-…and two meetings later:
-
-```text
-#1 Handle the authentication changes (owner: Priya Sharma)
-   2026-09-07  Sprint 14 Planning   created          open
-   2026-09-14  Sprint 14 Sync       status_changed   open -> blocked
-               "The authentication changes are blocked."
-   2026-09-21  Sprint 14 Review     status_changed   blocked -> done
-               "Authentication is completed."
-```
+</div>
 
 ---
 
-## Table of contents
+## Overview
 
-- [Features](#features)
-- [Architecture at a glance](#architecture-at-a-glance)
-- [Quickstart](#quickstart)
-- [Using ActionGraph](#using-actiongraph)
-- [Project structure](#project-structure)
-- [Evaluation results](#evaluation-results)
-- [Tech stack](#tech-stack)
-- [Documentation](#documentation)
-- [Roadmap](#roadmap)
+ActionGraph ingests meeting recordings and transcripts and produces a structured record of what
+was decided and who committed to what. Every extracted item (decision, action item, owner,
+deadline, risk) is validated against a typed schema, grounded in a verbatim quote from the
+transcript, and then either approved automatically or routed to a human review queue with an
+explanation. Action items are tracked across later meetings, so their status moves from *open*
+to *blocked* to *done* as the team reports progress.
 
-## Features
+The system pairs a large language model with deterministic engineering. The model interprets
+informal speech; tested code performs everything that must be exact: date arithmetic, identity
+resolution, evidence verification and review routing.
 
-| # | Capability | How it works | Code |
-|---|-----------|--------------|------|
-| 1 | **Speech-to-text** | Audio/video → transcript with Whisper (`faster-whisper`), plus `.txt` / `.vtt` / `.srt` / `.json` transcripts | [`ingestion/`](src/actiongraph/ingestion) |
-| 2 | **LLM extraction** | Claude reads the transcript plus the open work from earlier meetings | [`extraction/anthropic_extractor.py`](src/actiongraph/extraction/anthropic_extractor.py) |
-| 3 | **Structured output** | A Pydantic schema becomes a JSON schema the API *guarantees* the reply follows | [`domain/schemas.py`](src/actiongraph/domain/schemas.py) |
-| 4 | **Entity resolution** | "Priya", "Priya S.", "@priya", `priya.sharma@acme.com` → one person; ambiguous names go to review | [`enrichment/entity_resolution.py`](src/actiongraph/enrichment/entity_resolution.py) |
-| 5 | **Temporal understanding** | "by Friday", "end of next week", "in 2 weeks" → dates, computed by deterministic code | [`enrichment/temporal.py`](src/actiongraph/enrichment/temporal.py) |
-| 6 | **Cross-meeting tracking** | Status updates, postponements, duplicate detection, risk → blocked-action links | [`services/tracking.py`](src/actiongraph/services/tracking.py) |
-| 7 | **Human-in-the-loop** | Confidence + evidence grounding + resolution checks decide what needs a human | [`enrichment/confidence.py`](src/actiongraph/enrichment/confidence.py) |
-| + | **Hallucination check** | Every item must quote the transcript; quotes that are not there get flagged | [`enrichment/grounding.py`](src/actiongraph/enrichment/grounding.py) |
-| + | **Evaluation harness** | Precision / recall / F1 on a hand-labelled dataset, including a held-out case | [`evaluation/`](src/actiongraph/evaluation) |
-| + | **Offline mode** | A rule-based extractor runs the whole system with no API key | [`extraction/rule_based.py`](src/actiongraph/extraction/rule_based.py) |
+| Transcript (meeting on Mon 7 Sep 2026) | Tracked action |
+|---|---|
+| `Maya Chen: We'll update the API design by Friday.` | **Update the API design** · owner *Team* · due *2026-09-11* |
+| `Maya Chen: Priya will handle the authentication changes.` | **Handle the authentication changes** · owner *Priya Sharma* |
+| `Maya Chen: Sam, please share the user research by Wednesday.` | **Share the user research** · owner *Sam Lee* · due *2026-09-09* |
 
-## Architecture at a glance
+## Key features
+
+- **Multi-format ingestion.** Plain-text, WebVTT, SRT and JSON transcripts; audio and video through local Whisper transcription (`faster-whisper`).
+- **Schema-constrained extraction.** Claude structured outputs bound to a Pydantic contract; responses always parse and are validated before use.
+- **Evidence grounding.** Every item carries a verbatim quote that is checked against the source transcript to detect hallucinated content.
+- **Entity resolution.** `Priya`, `Priya S.`, `@priya` and `priya.sharma@acme.com` resolve to one person; ambiguous names are flagged, never guessed.
+- **Temporal resolution.** Phrases such as *by Friday* or *end of next week* resolve deterministically to dates, each with a confidence score and an explanation.
+- **Cross-meeting tracking.** Status and deadline updates, duplicate folding, superseded proposals and risk-to-action links, stored as an auditable event history.
+- **Human-in-the-loop review.** Uncertain items are queued with plain-English reasons; approving a pending status update applies it.
+- **Three interfaces.** REST API (FastAPI, OpenAPI docs), command-line interface, and a web UI with an interactive graph view.
+- **Evaluation harness.** Precision, recall and F1 on a hand-labelled dataset that includes a held-out case.
+- **Offline mode.** A rule-based extractor runs the complete system without an API key.
+
+## Demo
+
+**[Watch the 60-second narrated walkthrough](brag-output/brag.mp4)** (1080p, built with HyperFrames from the project's own sample data).
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/action-timeline.png" alt="Action tracker with cross-meeting timeline" />
+      <p><sub><b>Action tracker.</b> Action #1 moves from <i>open</i> to <i>blocked</i> to <i>done</i> across three meetings; each change links to the meeting and quote that caused it.</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/review-queue.png" alt="Human review queue with reasons" />
+      <p><sub><b>Review queue.</b> Items the system was not confident about, each with the reason it was flagged.</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/graph.png" alt="Graph of meetings, actions, people, decisions and risks" />
+      <p><sub><b>Graph view.</b> Meetings, actions, people, decisions and risks; the red edge marks a blocker.</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/assets/hero-extraction.jpg" alt="Transcript converted into schema-valid JSON" />
+      <p><sub><b>Extraction.</b> One structured-output call converts a transcript into schema-valid data.</sub></p>
+    </td>
+  </tr>
+</table>
+
+<sub>Screenshots are captured from the bundled demo dataset (`actiongraph demo --provider offline`).</sub>
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Input
-        A[Audio / video] -->|Whisper| T
-        F[.txt .vtt .srt .json] --> T[Transcript]
+    subgraph Ingestion
+        A[Audio / video] -->|Whisper| T[Transcript]
+        F[.txt · .vtt · .srt · .json] --> T
     end
-    subgraph Pipeline["MeetingProcessor (services/pipeline.py)"]
-        T --> X["LLM extraction<br/>(structured output)"]
-        DB[(SQLite)] -. open actions + known people .-> X
-        X --> G[Grounding]
+    subgraph Pipeline["MeetingProcessor"]
+        T --> X["LLM extraction<br/>(structured outputs)"]
+        DB[(SQLite)] -. open actions,<br/>known people .-> X
+        X --> G[Evidence grounding]
         G --> E[Entity resolution]
-        E --> D[Deadline resolution]
-        D --> C{Confidence<br/>& review routing}
+        E --> D[Temporal resolution]
+        D --> C{Confidence and<br/>review routing}
     end
     C -->|confident| DB
-    C -->|unsure| R[Review queue] -->|approve / edit| DB
-    DB --> UI[Web UI / REST API / CLI]
-    DB --> GR[ActionGraph<br/>JSON / Mermaid]
+    C -->|uncertain| R[Review queue] -->|approve / edit| DB
+    DB --> I[REST API · CLI · Web UI]
+    DB --> GR[Graph export<br/>JSON · Mermaid]
 ```
 
-The LLM does what LLMs are good at (understanding messy language). Plain,
-tested code does what must be exact (dates, identity, verification). See
-[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
+| Layer | Responsibility | Package |
+|---|---|---|
+| Domain | Shared vocabulary and the LLM output contract | `domain/` |
+| Ingestion | Any input format → `Transcript` | `ingestion/` |
+| Extraction | `Transcript` → `MeetingExtraction` (Claude or offline rules) behind one interface | `extraction/` |
+| Enrichment | Pure, deterministic checks: grounding, people, dates, confidence | `enrichment/` |
+| Storage | SQLAlchemy models and a repository of named queries | `storage/` |
+| Services | Pipeline orchestration, cross-meeting tracking, review workflow | `services/` |
+| Interfaces | REST API, CLI and web UI | `api/`, `cli.py`, `web/` |
 
-## Quickstart
+Dependencies point inward only, so core logic is testable without a database or network and the
+LLM provider can be replaced without touching the pipeline. Processing a meeting is a single
+transaction: the LLM call runs before any write, and any failure rolls back cleanly.
 
-Requires **Python 3.11+**. Commands are shown for Windows PowerShell; macOS /
-Linux equivalents are in [docs/guides/GETTING_STARTED.md](docs/guides/GETTING_STARTED.md).
+Further reading: [Architecture](docs/architecture/ARCHITECTURE.md) ·
+[Pipeline walkthrough](docs/architecture/PIPELINE.md) ·
+[Data model](docs/architecture/DATA_MODEL.md)
 
-```powershell
-# 1. Create and activate a virtual environment
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+## Getting started
 
-# 2. Install ActionGraph with development tools
-pip install -e ".[dev]"
+### Prerequisites
 
-# 3. Configure (the default .env.example uses the free offline extractor)
-Copy-Item .env.example .env
+- Python 3.11 or 3.12
+- Git
+- Optional: an [Anthropic API key](https://platform.claude.com/) for LLM extraction (the offline extractor needs none)
 
-# 4. Run the three-meeting demo - no API key needed
-actiongraph demo --provider offline
+### Installation
 
-# 5. Run the tests
-pytest
+```bash
+git clone https://github.com/satyaidk/Action-Graph.git
+cd Action-Graph
+
+python -m venv .venv
+source .venv/bin/activate            # Windows PowerShell: .\.venv\Scripts\Activate.ps1
+
+pip install -e ".[dev]"              # add ",audio" for speech-to-text: pip install -e ".[dev,audio]"
+cp .env.example .env                 # Windows PowerShell: Copy-Item .env.example .env
 ```
 
-To use Claude for real extraction, put your key in `.env`:
+### Configuration
 
-```ini
-ACTIONGRAPH_LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+Settings are read from environment variables or `.env`. The most important ones:
+
+| Variable | Default | Description |
+|---|---|---|
+| `ACTIONGRAPH_LLM_PROVIDER` | `anthropic` | `anthropic` for Claude, `offline` for the rule-based extractor (`.env.example` uses `offline`) |
+| `ANTHROPIC_API_KEY` | — | API key used when the provider is `anthropic` |
+| `ACTIONGRAPH_ANTHROPIC_MODEL` | `claude-opus-5-5` | Model identifier |
+| `ACTIONGRAPH_REVIEW_THRESHOLD` | `0.7` | Items below this confidence are sent to review |
+| `ACTIONGRAPH_DATABASE_URL` | `sqlite:///data/actiongraph.db` | Any SQLAlchemy database URL |
+
+Full reference: [docs/guides/CONFIGURATION.md](docs/guides/CONFIGURATION.md).
+
+### Run
+
+```bash
+actiongraph demo --provider offline      # process the three bundled sample meetings
+actiongraph serve --db data/demo.db      # web UI: http://127.0.0.1:8000 · API docs: /docs
 ```
 
-then `actiongraph demo --provider anthropic`.
+## Usage
 
-## Using ActionGraph
+### Command-line interface
 
-**Web UI**: `actiongraph serve`, then open http://127.0.0.1:8000. Paste or
-upload a meeting, browse actions with their timelines, work through the review
-queue, and explore the interactive graph.
+| Command | Purpose |
+|---|---|
+| `actiongraph process <file> [--date YYYY-MM-DD]` | Process a transcript, subtitle or audio file |
+| `actiongraph actions [--status blocked]` | List tracked action items |
+| `actiongraph timeline <id>` | Show an action's history across meetings |
+| `actiongraph review` | List items awaiting review, with reasons |
+| `actiongraph approve <kind> <id>` / `reject <kind> <id>` | Resolve a review item |
+| `actiongraph people` | List people and every name variant merged into them |
+| `actiongraph graph [--output graph.md]` | Export the graph as a Mermaid diagram |
+| `actiongraph eval --provider <name>` | Score extraction quality on the labelled dataset |
+| `actiongraph serve` | Start the REST API and web UI |
 
-**REST API**: interactive docs at http://127.0.0.1:8000/docs. See
-[docs/api/API_REFERENCE.md](docs/api/API_REFERENCE.md).
+### REST API
 
-**CLI**:
-
-```text
-actiongraph process meeting.vtt --date 2026-09-22   process one file (text, subtitles or audio)
-actiongraph actions [--status blocked]              list tracked work
-actiongraph timeline 3                              one action's history across meetings
-actiongraph review                                  what needs a human, and why
-actiongraph approve action 6 / reject event 11      human-in-the-loop decisions
-actiongraph people                                  people and every spelling merged into them
-actiongraph graph --output graph.md                 the ActionGraph as a Mermaid diagram
-actiongraph eval --provider anthropic               measure extraction quality
+```bash
+curl -X POST http://127.0.0.1:8000/api/meetings \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Team sync", "meeting_date": "2026-10-05",
+       "transcript": "Ana Ruiz: I will send the deck by Friday."}'
 ```
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/meetings` · `POST /api/meetings/upload` | Process a pasted transcript or an uploaded file |
+| `GET /api/actions` · `GET /api/actions/{id}` · `PATCH /api/actions/{id}` | Track, inspect and correct action items |
+| `GET /api/review` · `POST /api/review/{kind}/{id}/approve` | Human-in-the-loop review |
+| `GET /api/graph` · `GET /api/graph/mermaid` | Graph as JSON or Mermaid |
+
+Full reference with request and response examples: [docs/api/API_REFERENCE.md](docs/api/API_REFERENCE.md).
+Interactive OpenAPI documentation is served at `/docs` while the server is running.
 
 ## Project structure
 
 ```text
 .
 ├── src/actiongraph/
-│   ├── domain/          Enums + the LLM output schema (the "contract")
-│   ├── ingestion/       Files and audio → Transcript
-│   ├── extraction/      Transcript → structured data (Claude, or offline rules)
-│   ├── enrichment/      Grounding, entity resolution, dates, confidence (pure functions)
-│   ├── storage/         SQLAlchemy tables + Repository (all queries)
-│   ├── services/        Pipeline orchestration, cross-meeting tracking, review
-│   ├── graph/           Nodes/edges for visualisation; Mermaid export
-│   ├── evaluation/      Precision/recall/F1 harness
-│   ├── api/             FastAPI app, routes, request/response schemas
-│   ├── web/             Single-page UI (HTML/CSS/JS, no build step)
+│   ├── domain/          Enums and the LLM output schema (the extraction contract)
+│   ├── ingestion/       Transcript parsers and Whisper speech-to-text
+│   ├── extraction/      Extractor interface, Claude extractor, offline extractor, prompts
+│   ├── enrichment/      Grounding, entity resolution, temporal resolution, confidence
+│   ├── storage/         SQLAlchemy models, engine/session setup, repository
+│   ├── services/        Meeting pipeline, cross-meeting tracking, review workflow
+│   ├── graph/           Graph construction and Mermaid export
+│   ├── evaluation/      Metrics and evaluation runner
+│   ├── api/             FastAPI application, routes and schemas
+│   ├── web/             Single-page web UI (HTML, CSS, JavaScript)
 │   └── cli.py           Typer command-line interface
-├── tests/
-│   ├── unit/            Fast tests of pure logic (no DB, no network)
-│   └── integration/     Pipeline, review, API and CLI against a temp database
+├── tests/               Unit and integration tests
 ├── evals/               Hand-labelled evaluation dataset
-├── samples/             Example meetings (a 3-week storyline + a .vtt file)
-└── docs/                Design doc, ADRs, architecture, guides, concepts
+├── samples/             Sample meetings (three-week storyline and a WebVTT export)
+├── docs/                Design doc, ADRs, architecture, guides, concepts
+└── brag-output/         Source and render of the demo video (HyperFrames)
 ```
 
-## Evaluation results
+## Testing and quality
 
-Offline rule-based baseline on the golden dataset (`actiongraph eval --provider offline`):
+| Check | Scope | Command |
+|---|---|---|
+| Unit tests | 119 tests of pure logic: dates, names, grounding, scoring, parsing, extractors | `pytest tests/unit` |
+| Integration tests | 41 tests of the pipeline, review workflow, REST API and CLI on a temporary database | `pytest tests/integration` |
+| Live API test | Real Claude extraction; opt-in, skipped by default | `ACTIONGRAPH_LIVE_TESTS=1 pytest -m live` |
+| Coverage | 96% line coverage | `pytest --cov` |
+| Lint and format | Ruff | `ruff check src tests` · `ruff format --check src tests` |
+| Continuous integration | Ubuntu and Windows × Python 3.11 and 3.12 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 
-| Case | Action F1 | Status-update F1 | Decision F1 | Risk F1 |
-|------|----------:|-----------------:|------------:|--------:|
-| 01–05 (transcripts the rules were written against) | 0.96 | 0.95 | 1.00 | 0.75 |
-| **06 held-out "messy standup"** | **0.00** | – | **0.00** | **0.00** |
-| Total (micro-averaged) | 0.84 | 0.95 | 0.91 | 0.67 |
+The test suite needs no network access: the LLM layer is exercised through a scripted fake
+extractor and a fake SDK client. Model *quality* is measured separately by the evaluation harness.
+See [docs/guides/TESTING.md](docs/guides/TESTING.md).
 
-The baseline looks excellent on data it was tuned on and **fails completely on
-natural speech it has never seen**. That is overfitting, and it is the reason
-this project uses an LLM. Run `actiongraph eval --provider anthropic` to
-measure Claude on the same cases; the method and how to read the numbers are in
+## Evaluation
+
+Results of the offline rule-based baseline on the six labelled cases
+(`actiongraph eval --provider offline`):
+
+| Cases | Action F1 | Owner accuracy | Deadline accuracy | Status-update F1 | Decision F1 | Risk F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| 01–05 (used while writing the rules) | 0.96 | 1.00 | 1.00 | 0.95 | 1.00 | 0.75 |
+| 06 (held out, informal speech) | 0.00 | — | — | — | 0.00 | 0.00 |
+| **Total (micro-averaged)** | **0.84** | 1.00 | 1.00 | 0.95 | 0.91 | 0.67 |
+
+The baseline performs well on the transcripts it was tuned against and fails on unseen informal
+speech, a measured illustration of overfitting and the motivation for LLM extraction. Run
+`actiongraph eval --provider anthropic` to score Claude on the same cases. Methodology:
 [docs/guides/EVALUATION.md](docs/guides/EVALUATION.md).
 
-## Tech stack
+## Design decisions
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Language | Python 3.11+ | The LLM/ML ecosystem lives here |
-| LLM | Claude (`claude-opus-5-5`) via the official `anthropic` SDK | Structured outputs, prompt caching, server-side refusal fallback |
-| Schemas | Pydantic v2 | One model = JSON schema for the LLM + validation of its reply |
-| API | FastAPI + Uvicorn | Typed, async-capable, auto-generated OpenAPI docs |
-| Storage | SQLAlchemy 2.0 + SQLite | Zero setup; swap the URL for PostgreSQL later ([ADR-0003](docs/adr/0003-relational-storage-for-the-graph.md)) |
-| Speech-to-text | faster-whisper (optional) | Runs Whisper locally on CPU; no ffmpeg install needed |
-| CLI | Typer + Rich | Type-hinted commands, readable tables |
-| UI | Vanilla JS + vis-network | No build step, so beginners can read every line |
-| Quality | pytest, pytest-cov, ruff, GitHub Actions | Tests, coverage, lint + format in CI |
+Significant decisions are recorded as Architecture Decision Records:
+
+| ADR | Decision |
+|---|---|
+| [0002](docs/adr/0002-python-fastapi-sqlite-stack.md) | Python, FastAPI and SQLAlchemy/SQLite as the base stack |
+| [0003](docs/adr/0003-relational-storage-for-the-graph.md) | Store the graph in relational tables rather than a graph database |
+| [0004](docs/adr/0004-structured-outputs.md) | Use structured outputs with a Pydantic schema for extraction |
+| [0005](docs/adr/0005-deterministic-temporal-resolution.md) | The model copies deadline phrases; deterministic code resolves dates |
+| [0006](docs/adr/0006-confidence-based-human-review.md) | Route uncertain items to human review with explicit reasons |
+| [0007](docs/adr/0007-pluggable-extractors-and-offline-mode.md) | Extractor interface with an offline implementation |
 
 ## Documentation
 
-Start with **[docs/LEARNING_PATH.md](docs/LEARNING_PATH.md)**, a guided,
-step-by-step tour of the codebase for beginners. Everything else is indexed in
-**[docs/README.md](docs/README.md)**:
-
-- [Technical design document](docs/design/DESIGN.md): goals, non-goals, design, alternatives, risks
-- [Architecture](docs/architecture/ARCHITECTURE.md) · [Pipeline walkthrough](docs/architecture/PIPELINE.md) · [Data model](docs/architecture/DATA_MODEL.md)
-- [Architecture Decision Records](docs/adr/README.md): why each major choice was made
-- [Concepts](docs/concepts/README.md): structured outputs, grounding, entity resolution, temporal reasoning, HITL, …
-- Guides: [Getting started](docs/guides/GETTING_STARTED.md) · [Development](docs/guides/DEVELOPMENT.md) · [Configuration](docs/guides/CONFIGURATION.md) · [Testing](docs/guides/TESTING.md) · [Evaluation](docs/guides/EVALUATION.md) · [Prompt engineering](docs/guides/PROMPT_ENGINEERING.md)
-- [API reference](docs/api/API_REFERENCE.md) · [Runbook](docs/operations/RUNBOOK.md) · [Glossary](docs/GLOSSARY.md)
+| Document | Contents |
+|---|---|
+| [Design document](docs/design/DESIGN.md) | Goals, non-goals, detailed design, alternatives, risks |
+| [Architecture](docs/architecture/ARCHITECTURE.md) · [Pipeline](docs/architecture/PIPELINE.md) · [Data model](docs/architecture/DATA_MODEL.md) | How the system is built and how data flows |
+| [Concepts](docs/concepts/README.md) | Structured outputs, grounding, entity resolution, temporal reasoning, human-in-the-loop |
+| [Guides](docs/guides/GETTING_STARTED.md) | Getting started, development, configuration, testing, evaluation, prompt engineering |
+| [API reference](docs/api/API_REFERENCE.md) · [Runbook](docs/operations/RUNBOOK.md) · [Glossary](docs/GLOSSARY.md) | Reference and operations |
+| [Learning path](docs/LEARNING_PATH.md) | A guided, stage-by-stage tour of the codebase |
 
 ## Roadmap
 
-- [ ] Speaker diarization for audio (who said what), e.g. `pyannote.audio`
-- [ ] Background job queue so long recordings don't block HTTP requests
-- [ ] Semantic matching (embeddings / LLM-as-judge) in evaluation and duplicate detection
-- [ ] Alembic migrations and PostgreSQL deployment
-- [ ] Integrations: push approved actions to Jira / Linear / Slack reminders
+- [ ] Speaker diarization for audio input (`pyannote.audio`)
+- [ ] Asynchronous processing with a job queue for long recordings
+- [ ] Semantic matching (embeddings or LLM-as-judge) for evaluation and duplicate detection
+- [ ] Alembic migrations and PostgreSQL deployment profile
+- [ ] Integrations: push approved actions to Jira, Linear or GitHub Issues
 - [ ] Authentication and multi-team workspaces
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow,
+coding conventions and pull-request checklist, and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE)
+Distributed under the MIT License. See [LICENSE](LICENSE).
+
+## Acknowledgements
+
+- [Anthropic Claude](https://www.anthropic.com/) and the official Python SDK, for structured-output extraction
+- [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/), [Pydantic](https://docs.pydantic.dev/), [Typer](https://typer.tiangolo.com/) and [Rich](https://github.com/Textualize/rich)
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) for local speech-to-text
+- [vis-network](https://visjs.github.io/vis-network/docs/network/) for the graph view
+- Demo video produced with [HyperFrames](https://hyperframes.heygen.com/); sound effects by [Kenney](https://kenney.nl/) (CC0); music from ende.app's *Happy Beats / Business Moves*
