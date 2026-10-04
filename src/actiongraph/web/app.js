@@ -65,13 +65,26 @@ const loaders = {
   meetings: loadMeetings,
 };
 
+// Returns the loader's promise so deep links can wait for the data.
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${name}`));
+  return loaders[name]?.();
+}
+
 document.querySelectorAll(".tab").forEach((tab) =>
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === tab));
-    document.querySelectorAll(".panel").forEach((p) =>
-      p.classList.toggle("active", p.id === `tab-${tab.dataset.tab}`));
-    loaders[tab.dataset.tab]?.();
+    history.replaceState(null, "", `#${tab.dataset.tab}`);
+    showTab(tab.dataset.tab);
   }));
+
+// Deep links: #review, #graph, #meetings, #actions, #actions/3 (opens action 3).
+async function openDeepLink() {
+  const [tab, arg] = location.hash.slice(1).split("/");
+  if (!document.getElementById(`tab-${tab}`)) return;
+  await showTab(tab);
+  if (tab === "actions" && /^\d+$/.test(arg ?? "")) await showActionDetail(arg);
+}
 
 // ---------------------------------------------------------------- process
 function showReport(report) {
@@ -254,8 +267,10 @@ async function loadGraph() {
     title: `${n.type}: ${n.label}`,  // vis-network renders string titles as text
     shape: SHAPES[n.type],
     color: GROUP_COLORS[n.type],
-    font: { color: n.type === "meeting" ? "#ffffff" : undefined },
-    size: n.type === "person" ? 14 : undefined,
+    // Only set keys we need: an explicit `undefined` overrides vis-network's defaults
+    // and makes diamond/triangle nodes (decisions, risks) render with no size at all.
+    ...(n.type === "meeting" ? { font: { color: "#ffffff" } } : {}),
+    ...(n.type === "person" ? { size: 14 } : { size: 18 }),
   }));
   const edges = graph.edges.map((e) => ({
     from: e.source, to: e.target, label: e.label || e.type.toLowerCase(), arrows: "to",
@@ -263,11 +278,13 @@ async function loadGraph() {
     dashes: e.type === "UPDATED",
   }));
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  new vis.Network($("#graph-canvas"), { nodes, edges }, {
+  const network = new vis.Network($("#graph-canvas"), { nodes, edges }, {
     physics: { solver: "forceAtlas2Based", stabilization: { iterations: 200 } },
     nodes: { font: { color: dark ? "#e6e8ee" : "#1d2330" } },
     edges: { font: { color: dark ? "#9aa3b5" : "#667085", strokeWidth: 0 } },
   });
+  // Zoom so every node is visible once the layout has settled.
+  network.once("stabilizationIterationsDone", () => network.fit({ animation: false }));
 }
 
 $("#copy-mermaid").addEventListener("click", async () => {
@@ -314,4 +331,6 @@ async function loadMeetings() {
     $("#provider-badge").textContent = "API unreachable";
   }
   refreshReviewCount();
+  window.addEventListener("hashchange", openDeepLink);
+  openDeepLink().catch((err) => toast(err.message, true));
 })();
